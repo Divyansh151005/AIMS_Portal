@@ -31,6 +31,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
+      console.log("hii")
       await signup(formData);
       toast.success('Signup successful! Please wait for admin approval.');
       router.push('/login');

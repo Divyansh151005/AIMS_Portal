@@ -18,6 +18,7 @@ export const isAuthenticated = () => {
 };
 
 export const login = async (email, password) => {
+  console.log(email,password)
   try {
     const response = await authAPI.login({ email, password });
     const { token, user } = response.data;

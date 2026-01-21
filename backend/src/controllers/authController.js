@@ -18,6 +18,7 @@ const UserStatus = {
 };
 
 export const signup = async (req, res, next) => {
+  console.log("hii")
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

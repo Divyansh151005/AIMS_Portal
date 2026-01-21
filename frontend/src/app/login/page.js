@@ -19,7 +19,7 @@ export default function LoginPage() {
     try {
       const { user } = await login(email, password);
       toast.success('Login successful!');
-
+      console.log(user);
       // Redirect based on role
       if (user.role === 'STUDENT') {
         router.push('/student/dashboard');
