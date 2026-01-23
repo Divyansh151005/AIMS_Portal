@@ -38,6 +38,7 @@ export default function DashboardLayout({ children, role }) {
     TEACHER: [
       { name: 'Dashboard', href: '/teacher/dashboard' },
       { name: 'Offer Course', href: '/teacher/offer-course' },
+      { name: 'My Actions', href: '/teacher/my-actions' },
     ],
     ADMIN: [
       { name: 'Dashboard', href: '/admin/dashboard' },
@@ -67,11 +68,10 @@ export default function DashboardLayout({ children, role }) {
                     <Link
                       key={item.name}
                       href={item.href}
-                      className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                        isActive
+                      className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${isActive
                           ? 'border-blue-500 text-gray-900'
                           : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                      }`}
+                        }`}
                     >
                       {item.name}
                     </Link>

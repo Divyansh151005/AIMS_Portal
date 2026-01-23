@@ -97,6 +97,7 @@ export const enrollmentAPI = {
   enroll: (courseOfferingId) => api.post('/enrollments/enroll', { courseOfferingId }),
   drop: (id) => api.post(`/enrollments/drop/${id}`),
   getMyEnrollments: () => api.get('/enrollments/my'),
+  getRequests: () => api.get('/teachers/enrollments'),
   approveInstructor: (id) => api.post(`/enrollments/approve/instructor/${id}`),
   approveAdvisor: (id) => api.post(`/enrollments/approve/advisor/${id}`),
   reject: (id) => api.post(`/enrollments/reject/${id}`),

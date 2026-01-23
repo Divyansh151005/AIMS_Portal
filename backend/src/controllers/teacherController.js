@@ -76,6 +76,8 @@ export const getEnrollmentRequests = async (req, res, next) => {
       courseOffering: {
         instructorId: teacher.id,
       },
+      // status filter will be added conditionally below
+      status: status || EnrollmentStatus.PENDING_INSTRUCTOR_APPROVAL,
     };
 
     if (status) {
