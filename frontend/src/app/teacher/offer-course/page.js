@@ -149,14 +149,23 @@ export default function OfferCourse() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Department *
                 </label>
-                <input
-                  type="text"
+                <select
                   name="department"
                   value={formData.department}
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
+                >
+                  <option value="">Select Department</option>
+                  <option value="CSE">CSE</option>
+                  <option value="AI">AI</option>
+                  <option value="CHE">CHE</option>
+                  <option value="CE">CE</option>
+                  <option value="MEB">MEB</option>
+                  <option value="MMB">MMB</option>
+                  <option value="EP">EP</option>
+                  <option value="EE">EE</option>
+                </select>
               </div>
 
               <div>
@@ -262,18 +271,26 @@ export default function OfferCourse() {
                 Allowed Branches (leave empty for all branches)
               </label>
               <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
+                <select
                   value={branchInput}
                   onChange={(e) => setBranchInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddBranch())}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., CS, EE"
-                />
+                >
+                  <option value="">Select Branch to Add</option>
+                  <option value="CSE">CSE</option>
+                  <option value="AI">AI</option>
+                  <option value="CHE">CHE</option>
+                  <option value="CE">CE</option>
+                  <option value="MEB">MEB</option>
+                  <option value="MMB">MMB</option>
+                  <option value="EP">EP</option>
+                  <option value="EE">EE</option>
+                </select>
                 <button
                   type="button"
                   onClick={handleAddBranch}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                  disabled={!branchInput}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Add
                 </button>
