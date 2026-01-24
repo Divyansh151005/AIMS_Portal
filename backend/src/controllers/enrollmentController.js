@@ -63,33 +63,17 @@ export const enrollInCourse = async (req, res, next) => {
       return res.status(400).json({ error: 'Course offering is not approved yet' });
     }
 
-    // Check eligibility
-    if (courseOffering.allowedBranches.length > 0 && !courseOffering.allowedBranches.includes(student.branch)) {
-      return res.status(403).json({ error: 'You are not eligible for this course (branch restriction)' });
+    // Check eligibility - case-insensitive branch matching
+    if (courseOffering.allowedBranches.length > 0) {
+      const studentBranchUpper = student.branch.toUpperCase();
+      const allowedBranchesUpper = courseOffering.allowedBranches.map(b => b.toUpperCase());
+      if (!allowedBranchesUpper.includes(studentBranchUpper)) {
+        return res.status(403).json({ error: 'You are not eligible for this course (branch restriction)' });
+      }
     }
 
     if (courseOffering.allowedYears.length > 0 && !courseOffering.allowedYears.includes(student.entryYear)) {
       return res.status(403).json({ error: 'You are not eligible for this course (entry year restriction)' });
-    }
-
-    // Check slot conflict
-    const existingEnrollment = await prisma.enrollmentRequest.findFirst({
-      where: {
-        studentId: student.id,
-        status: {
-          in: [EnrollmentStatus.ENROLLED, EnrollmentStatus.PENDING_INSTRUCTOR_APPROVAL, EnrollmentStatus.PENDING_ADVISOR_APPROVAL],
-        },
-      },
-      include: {
-        courseOffering: true,
-      },
-    });
-
-    if (existingEnrollment && existingEnrollment.courseOffering.slot === courseOffering.slot) {
-      return res.status(409).json({
-        error: `Slot conflict: You already have a course in slot ${courseOffering.slot}`,
-        conflictingCourse: existingEnrollment.courseOffering.courseCode,
-      });
     }
 
     // Check if already enrolled or requested
@@ -532,6 +516,100 @@ export const rejectEnrollment = async (req, res, next) => {
     });
   } catch (error) {
     console.error('RejectEnrollment error:', error);
+    next(error);
+  }
+};
+
+export const dropStudentFromCourse = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Get teacher
+    const teacher = await prisma.teacher.findUnique({
+      where: { userId: req.userId },
+    });
+
+    if (!teacher) {
+      return res.status(404).json({ error: 'Teacher not found' });
+    }
+
+    // Get enrollment request
+    const enrollment = await prisma.enrollmentRequest.findUnique({
+      where: { id },
+      include: {
+        courseOffering: {
+          include: {
+            instructor: true,
+          },
+        },
+        student: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!enrollment) {
+      return res.status(404).json({ error: 'Enrollment request not found' });
+    }
+
+    // Check if teacher is the instructor
+    if (enrollment.courseOffering.instructorId !== teacher.id) {
+      return res.status(403).json({ error: 'You can only drop students from your own courses' });
+    }
+
+    if (enrollment.status === EnrollmentStatus.DROPPED) {
+      return res.status(400).json({ error: 'Student already dropped from this course' });
+    }
+
+    // Update enrollment status to dropped
+    const updatedEnrollment = await prisma.enrollmentRequest.update({
+      where: { id },
+      data: {
+        status: EnrollmentStatus.DROPPED,
+        droppedAt: new Date(),
+      },
+      include: {
+        courseOffering: true,
+        student: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Send email
+    try {
+      await sendEnrollmentStatusEmail(
+        enrollment.student.user.email,
+        enrollment.student.user.name,
+        enrollment.courseOffering.courseCode,
+        enrollment.courseOffering.courseTitle,
+        EnrollmentStatus.DROPPED,
+        'STUDENT'
+      );
+    } catch (emailError) {
+      console.error('Email error:', emailError);
+    }
+
+    res.json({
+      message: 'Student dropped from course successfully',
+      enrollmentRequest: updatedEnrollment,
+    });
+  } catch (error) {
+    console.error('DropStudentFromCourse error:', error);
     next(error);
   }
 };

@@ -54,11 +54,7 @@ export default function StudentCourses() {
       router.push('/student/dashboard');
     } catch (error) {
       const errorMsg = error.response?.data?.error || 'Failed to enroll in course';
-      if (error.response?.status === 409 && errorMsg.includes('Slot conflict')) {
-        toast.error(errorMsg);
-      } else {
-        toast.error(errorMsg);
-      }
+      toast.error(errorMsg);
     } finally {
       setEnrolling(null);
     }
@@ -67,18 +63,20 @@ export default function StudentCourses() {
   const isEligible = (course) => {
     if (!studentInfo) return false;
     
-    const branchMatch = course.allowedBranches.length === 0 || course.allowedBranches.includes(studentInfo.branch);
+    // Case-insensitive branch matching
+    let branchMatch = true;
+    if (course.allowedBranches.length > 0) {
+      const studentBranchUpper = studentInfo.branch.toUpperCase();
+      const allowedBranchesUpper = course.allowedBranches.map(b => b.toUpperCase());
+      branchMatch = allowedBranchesUpper.includes(studentBranchUpper);
+    }
+    
     const yearMatch = course.allowedYears.length === 0 || course.allowedYears.includes(studentInfo.entryYear);
     
     return branchMatch && yearMatch;
   };
 
-  const hasSlotConflict = (course) => {
-    return enrollments.some(e => {
-      const activeStatuses = ['ENROLLED', 'PENDING_INSTRUCTOR_APPROVAL', 'PENDING_ADVISOR_APPROVAL'];
-      return activeStatuses.includes(e.status) && e.courseOffering?.slot === course.slot;
-    });
-  };
+  // Slot conflict detection removed as per requirements
 
   const getEnrollmentStatus = (courseId) => {
     const enrollment = enrollments.find(e => e.courseOfferingId === courseId);
@@ -89,7 +87,7 @@ export default function StudentCourses() {
     const status = getEnrollmentStatus(course.id);
     if (status && status !== 'DROPPED') return false;
     if (!isEligible(course)) return false;
-    if (hasSlotConflict(course)) return false;
+    // Slot conflict check removed as per requirements
     return true;
   };
 
@@ -121,7 +119,6 @@ export default function StudentCourses() {
               {courses.map((course) => {
                 const enrollmentStatus = getEnrollmentStatus(course.id);
                 const eligible = isEligible(course);
-                const slotConflict = hasSlotConflict(course);
                 const canEnrollCourse = canEnroll(course);
 
                 return (
@@ -145,12 +142,6 @@ export default function StudentCourses() {
                     {!eligible && (
                       <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
                         Not eligible (branch/year restriction)
-                      </div>
-                    )}
-
-                    {slotConflict && (
-                      <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
-                        Slot conflict detected
                       </div>
                     )}
 

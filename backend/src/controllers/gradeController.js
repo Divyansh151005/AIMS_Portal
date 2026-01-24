@@ -42,9 +42,32 @@ export const assignGrade = async (req, res, next) => {
       },
     });
 
-    if (!enrollment || enrollment.status !== 'ENROLLED') {
-      return res.status(400).json({ error: 'Student is not enrolled in this course' });
+    if (!enrollment) {
+      return res.status(400).json({ error: 'Student enrollment not found for this course' });
     }
+    
+    if (enrollment.status !== 'ENROLLED') {
+      return res.status(400).json({ 
+        error: `Student is not enrolled in this course. Current status: ${enrollment.status}` 
+      });
+    }
+
+    // Normalize grade and marks values
+    const gradeValue = (grade && typeof grade === 'string' && grade.trim()) || null;
+    let marksValue = null;
+    if (marks !== undefined && marks !== null && marks !== '') {
+      const parsed = parseFloat(marks);
+      if (!isNaN(parsed)) {
+        marksValue = parsed;
+      }
+    }
+    
+    // Validate marks if provided
+    if (marksValue !== null && (marksValue < 0 || marksValue > 100)) {
+      return res.status(400).json({ error: 'Marks must be a number between 0 and 100' });
+    }
+    
+    console.log('Assigning grade:', { studentId, courseOfferingId, gradeValue, marksValue, teacherId: teacher.id });
 
     // Create or update grade
     const gradeRecord = await prisma.grade.upsert({
@@ -55,16 +78,16 @@ export const assignGrade = async (req, res, next) => {
         },
       },
       update: {
-        grade: grade || null,
-        marks: marks || null,
+        grade: gradeValue,
+        marks: marksValue,
         isPublished: false, // Reset published status on update
       },
       create: {
         studentId,
         courseOfferingId,
         teacherId: teacher.id,
-        grade: grade || null,
-        marks: marks || null,
+        grade: gradeValue,
+        marks: marksValue,
         isPublished: false,
       },
       include: {
@@ -128,12 +151,36 @@ export const updateGrade = async (req, res, next) => {
       return res.status(403).json({ error: 'You can only update grades for your own courses' });
     }
 
+    // Normalize grade and marks values
+    let gradeValue = existingGrade.grade;
+    if (grade !== undefined) {
+      gradeValue = (grade && typeof grade === 'string' && grade.trim()) || null;
+    }
+    
+    let marksValue = existingGrade.marks;
+    if (marks !== undefined) {
+      if (marks === null || marks === '') {
+        marksValue = null;
+      } else {
+        const parsed = parseFloat(marks);
+        if (isNaN(parsed)) {
+          return res.status(400).json({ error: 'Marks must be a valid number' });
+        }
+        if (parsed < 0 || parsed > 100) {
+          return res.status(400).json({ error: 'Marks must be a number between 0 and 100' });
+        }
+        marksValue = parsed;
+      }
+    }
+    
+    console.log('Updating grade:', { id, gradeValue, marksValue });
+
     // Update grade
     const updatedGrade = await prisma.grade.update({
       where: { id },
       data: {
-        grade: grade !== undefined ? grade : existingGrade.grade,
-        marks: marks !== undefined ? marks : existingGrade.marks,
+        grade: gradeValue,
+        marks: marksValue,
         isPublished: false, // Reset published status on update
       },
       include: {
@@ -264,9 +311,6 @@ export const getGradesByCourse = async (req, res, next) => {
                 email: true,
               },
             },
-          },
-          select: {
-            rollNumber: true,
           },
         },
       },

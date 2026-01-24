@@ -8,6 +8,7 @@ import {
   approveInstructorEnrollment,
   approveAdvisorEnrollment,
   rejectEnrollment,
+  dropStudentFromCourse,
 } from '../controllers/enrollmentController.js';
 
 const router = express.Router();
@@ -26,6 +27,7 @@ router.get('/my', requireRole('STUDENT'), requireActive, getMyEnrollments);
 // Instructor routes
 router.post('/approve/instructor/:id', requireRole('TEACHER'), requireActive, approveInstructorEnrollment);
 router.post('/reject/:id', requireRole('TEACHER', 'ADMIN'), requireActive, rejectEnrollment);
+router.post('/drop/:id', requireRole('TEACHER'), requireActive, dropStudentFromCourse);
 
 // Advisor routes (also teacher role)
 router.post('/approve/advisor/:id', requireRole('TEACHER'), requireActive, approveAdvisorEnrollment);

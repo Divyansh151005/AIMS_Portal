@@ -136,26 +136,45 @@ export default function StudentDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {enrolled.map((enrollment) => (
-                  <Link
+                  <div
                     key={enrollment.id}
-                    href={`/student/course/${enrollment.courseOfferingId}`}
                     className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition"
                   >
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {enrollment.courseOffering?.courseCode}
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">{enrollment.courseOffering?.courseTitle}</p>
+                    <Link href={`/student/course/${enrollment.courseOfferingId}`}>
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {enrollment.courseOffering?.courseCode}
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">{enrollment.courseOffering?.courseTitle}</p>
+                        </div>
+                        <StatusBadge status={enrollment.status} />
                       </div>
-                      <StatusBadge status={enrollment.status} />
+                      <div className="space-y-2 text-sm text-gray-600">
+                        <p>Slot: <span className="font-medium">{enrollment.courseOffering?.slot}</span></p>
+                        <p>Credits: <span className="font-medium">{enrollment.courseOffering?.C}</span></p>
+                        <p>Instructor: <span className="font-medium">{enrollment.courseOffering?.instructor?.user?.name}</span></p>
+                      </div>
+                    </Link>
+                    <div className="mt-4 pt-4 border-t">
+                      <button
+                        onClick={async () => {
+                          if (confirm('Are you sure you want to drop this course?')) {
+                            try {
+                              await enrollmentAPI.drop(enrollment.id);
+                              toast.success('Course dropped successfully');
+                              fetchDashboardData();
+                            } catch (error) {
+                              toast.error(error.response?.data?.error || 'Failed to drop course');
+                            }
+                          }
+                        }}
+                        className="w-full px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition"
+                      >
+                        Drop Course
+                      </button>
                     </div>
-                    <div className="space-y-2 text-sm text-gray-600">
-                      <p>Slot: <span className="font-medium">{enrollment.courseOffering?.slot}</span></p>
-                      <p>Credits: <span className="font-medium">{enrollment.courseOffering?.C}</span></p>
-                      <p>Instructor: <span className="font-medium">{enrollment.courseOffering?.instructor?.user?.name}</span></p>
-                    </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             )}
