@@ -32,7 +32,6 @@ export default function DashboardLayout({ children, role }) {
     STUDENT: [
       { name: 'Dashboard', href: '/student/dashboard' },
       { name: 'Courses', href: '/student/courses' },
-      { name: 'Timetable', href: '/student/timetable' },
       { name: 'Grades', href: '/student/grades' },
     ],
     TEACHER: [
