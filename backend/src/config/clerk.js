@@ -26,6 +26,7 @@ const otpStore = new Map();
  * Generate OTP HTML email template
  */
 const generateOTPEmailHTML = (otp, type = 'signup') => {
+    console.log(otp);
     const title = type === 'signup' ? 'Verify Your Signup' : 'Login Verification';
     const message = type === 'signup'
         ? 'Thank you for signing up for AIMS Portal. Please use the following code to verify your email address.'
