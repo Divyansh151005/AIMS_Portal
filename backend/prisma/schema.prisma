@@ -1,0 +1,213 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING_ADMIN_APPROVAL
+  REJECTED
+  INACTIVE
+}
+
+enum CourseType {
+  CORE
+  PROGRAM_ELECTIVE
+  OPEN_ELECTIVE
+  SCIENCE_MATH_ELECTIVE
+  HS_ELECTIVE
+}
+
+enum Slot {
+  PC1
+  PC2
+  PC3
+  PC4
+  PCE1
+  PCE2
+  PCE3
+  HSME
+  HSPE
+  PEOE
+  PCPE
+  PCDE
+  PHSME
+}
+
+enum EnrollmentStatus {
+  PENDING_INSTRUCTOR_APPROVAL
+  PENDING_ADVISOR_APPROVAL
+  ENROLLED
+  REJECTED
+  DROPPED
+}
+
+enum Semester {
+  SPRING_2025
+  FALL_2025
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String?  // Optional - OTP authentication is primary method
+  role      UserRole
+  status    UserStatus @default(PENDING_ADMIN_APPROVAL)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  student   Student?
+  teacher   Teacher?
+
+  @@index([email])
+  @@index([role, status])
+}
+
+model Student {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  rollNumber  String   @unique
+  branch      String
+  entryYear   Int
+  advisorId   String?  // Teacher ID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  advisor           Teacher?              @relation(fields: [advisorId], references: [id], onDelete: SetNull)
+  enrollmentRequests EnrollmentRequest[]
+  grades           Grade[]
+
+  @@index([rollNumber])
+  @@index([branch, entryYear])
+  @@index([advisorId])
+}
+
+model Teacher {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  department String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  advisedStudents   Student[]
+  courseOfferings   CourseOffering[]
+  grades           Grade[]
+
+  @@index([userId])
+  @@index([department])
+}
+
+model CourseOffering {
+  id              String     @id @default(cuid())
+  courseCode      String
+  courseTitle     String
+  department      String
+  semester        Semester
+  courseType      CourseType
+  slot            Slot
+  allowedBranches String[]   // Array of branch codes
+  allowedYears    Int[]      // Array of entry years
+  L               Int        // Lecture hours per week
+  P               Int        // Lab hours per week
+  T               Float      // Auto-calculated: L/3
+  S               Float      // Auto-calculated: 2L + P/2 - T
+  C               Float      // Auto-calculated: L + P/2
+  syllabus        String?    // PDF URL or text
+  isApproved      Boolean    @default(false)
+  instructorId    String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  // Relations
+  instructor      Teacher            @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  enrollmentRequests EnrollmentRequest[]
+  grades          Grade[]
+  timetableEntries Timetable[]
+
+  @@index([courseCode, semester])
+  @@index([instructorId])
+  @@index([slot, semester, isApproved])
+  @@index([isApproved])
+}
+
+model EnrollmentRequest {
+  id                String           @id @default(cuid())
+  studentId         String
+  courseOfferingId  String
+  status            EnrollmentStatus @default(PENDING_INSTRUCTOR_APPROVAL)
+  instructorApprovedAt DateTime?
+  advisorApprovedAt DateTime?
+  enrolledAt       DateTime?
+  droppedAt        DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  // Relations
+  student          Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseOffering   CourseOffering   @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseOfferingId])
+  @@index([studentId, status])
+  @@index([courseOfferingId, status])
+}
+
+model Grade {
+  id                String   @id @default(cuid())
+  studentId         String
+  courseOfferingId  String
+  teacherId         String
+  grade             String?  // Letter grade (A+, A, B+, etc.)
+  marks             Float?   // Numeric marks
+  isPublished       Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  student          Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseOffering   CourseOffering @relation(fields: [courseOfferingId], references: [id], onDelete: Cascade)
+  teacher          Teacher        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseOfferingId])
+  @@index([studentId])
+  @@index([courseOfferingId])
+}
+
+model Timetable {
+  id        String   @id @default(cuid())
+  day       Int      // 0 = Monday, 1 = Tuesday, ..., 5 = Saturday
+  timeSlot  Int      // 0 = 8:00-8:50, 1 = 9:00-9:50, ..., 10 = 6:00-6:50
+  slot      Slot
+  userId    String?  // Null for general timetable, userId for personal timetable
+  courseOfferingId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations (optional, could reference course offering)
+  courseOffering CourseOffering? @relation(fields: [courseOfferingId], references: [id], onDelete: SetNull)
+
+  @@unique([day, timeSlot, userId, slot])
+  @@index([userId])
+  @@index([slot, day, timeSlot])
+}
+
+// Remove CourseOffering relation from Timetable model - it's causing issues
+// We'll handle timetable through enrollment status and slots
