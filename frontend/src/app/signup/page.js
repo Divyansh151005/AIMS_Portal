@@ -120,16 +120,24 @@ export default function SignupPage() {
                   <label htmlFor="branch" className="block text-sm font-medium text-gray-700 mb-2">
                     Branch *
                   </label>
-                  <input
+                  <select
                     id="branch"
                     name="branch"
-                    type="text"
                     value={formData.branch}
                     onChange={handleChange}
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800"
-                    placeholder="e.g., CS, EE, ME"
-                  />
+                  >
+                    <option value="">Select Branch</option>
+                    <option value="CSE">CSE</option>
+                    <option value="AI">AI</option>
+                    <option value="CHE">CHE</option>
+                    <option value="CE">CE</option>
+                    <option value="MEB">MEB</option>
+                    <option value="MMB">MMB</option>
+                    <option value="EP">EP</option>
+                    <option value="EE">EE</option>
+                  </select>
                 </div>
 
                 <div>
@@ -156,16 +164,24 @@ export default function SignupPage() {
                 <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-2">
                   Department *
                 </label>
-                <input
+                <select
                   id="department"
                   name="department"
-                  type="text"
                   value={formData.department}
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800"
-                  placeholder="e.g., Computer Science, Electrical Engineering"
-                />
+                >
+                  <option value="">Select Department</option>
+                  <option value="CSE">CSE</option>
+                  <option value="AI">AI</option>
+                  <option value="CHE">CHE</option>
+                  <option value="CE">CE</option>
+                  <option value="MEB">MEB</option>
+                  <option value="MMB">MMB</option>
+                  <option value="EP">EP</option>
+                  <option value="EE">EE</option>
+                </select>
               </div>
             )}
           </div>

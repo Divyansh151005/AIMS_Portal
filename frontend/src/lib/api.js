@@ -1,7 +1,7 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -101,6 +101,7 @@ export const enrollmentAPI = {
   approveInstructor: (id) => api.post(`/enrollments/approve/instructor/${id}`),
   approveAdvisor: (id) => api.post(`/enrollments/approve/advisor/${id}`),
   reject: (id) => api.post(`/enrollments/reject/${id}`),
+  dropStudent: (id) => api.post(`/enrollments/drop/${id}`), // Teacher drops student from course
 };
 
 // Grade API

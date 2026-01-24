@@ -32,24 +32,35 @@ export default function TeacherCourseDetails() {
       setCourse(courseRes.data);
       
       // Organize enrollments from course data
+      // Only show PENDING_INSTRUCTOR_APPROVAL requests to the course instructor
+      // PENDING_ADVISOR_APPROVAL requests should only be visible to the student's advisor, not the course instructor
       const instructorPending = courseRes.data.enrollmentRequests?.filter(
         e => e.status === 'PENDING_INSTRUCTOR_APPROVAL'
-      ) || [];
-      const advisorPending = courseRes.data.enrollmentRequests?.filter(
-        e => e.status === 'PENDING_ADVISOR_APPROVAL'
       ) || [];
       
       setEnrollments({
         instructor: instructorPending,
-        advisor: advisorPending,
+        advisor: [], // Don't show advisor approval requests to course instructor
       });
 
       // Fetch grades
       try {
         const gradesRes = await gradeAPI.getByCourse(courseId);
-        setGrades(gradesRes.data || []);
+        const fetchedGrades = gradesRes.data || [];
+        setGrades(fetchedGrades);
+        
+        // Initialize form data with existing grades
+        const initialFormData = {};
+        fetchedGrades.forEach(grade => {
+          initialFormData[grade.studentId] = {
+            grade: grade.grade || '',
+            marks: grade.marks !== null && grade.marks !== undefined ? grade.marks.toString() : '',
+          };
+        });
+        setGradeForm(initialFormData);
       } catch (error) {
         // Grades might not exist yet
+        console.error('Error fetching grades:', error);
       }
     } catch (error) {
       toast.error('Failed to load course data');
@@ -90,30 +101,77 @@ export default function TeacherCourseDetails() {
   };
 
   const handleGradeChange = (studentId, field, value) => {
+    const currentFormData = gradeForm[studentId] || {};
     setGradeForm({
       ...gradeForm,
       [studentId]: {
-        ...gradeForm[studentId],
+        ...currentFormData,
         [field]: value,
       },
     });
+    console.log('Grade form updated:', { studentId, field, value, formData: { ...currentFormData, [field]: value } });
   };
 
   const handleSaveGrade = async (studentId) => {
-    const gradeData = gradeForm[studentId];
-    if (!gradeData) return;
+    // Get form data or initialize from existing grade
+    const existingGrade = grades.find(g => g.studentId === studentId);
+    const gradeData = gradeForm[studentId] || {
+      grade: existingGrade?.grade || '',
+      marks: existingGrade?.marks !== null && existingGrade?.marks !== undefined ? existingGrade.marks.toString() : '',
+    };
+    
+    if (!gradeData || (!gradeData.grade && !gradeData.marks)) {
+      toast.error('Please enter either a grade or marks to save');
+      return;
+    }
 
     try {
-      await gradeAPI.assign({
-        studentId,
-        courseOfferingId: courseId,
-        grade: gradeData.grade || null,
-        marks: gradeData.marks ? parseFloat(gradeData.marks) : null,
-      });
+      // Check if grade already exists - if so, update it; otherwise create it
+      const existingGrade = grades.find(g => g.studentId === studentId);
+      
+      // Process grade and marks - handle empty strings properly
+      const gradeValue = gradeData.grade?.trim() || null;
+      let marksValue = null;
+      if (gradeData.marks && gradeData.marks !== '' && gradeData.marks !== null) {
+        const parsed = parseFloat(gradeData.marks);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+          marksValue = parsed;
+        } else {
+          toast.error('Marks must be a number between 0 and 100');
+          return;
+        }
+      }
+      
+      console.log('Saving grade:', { studentId, courseId, gradeValue, marksValue, existingGrade: existingGrade?.id });
+      
+      if (existingGrade && existingGrade.id) {
+        // Update existing grade
+        const response = await gradeAPI.update(existingGrade.id, {
+          grade: gradeValue,
+          marks: marksValue,
+        });
+        console.log('Grade update response:', response);
+      } else {
+        // Create new grade
+        const response = await gradeAPI.assign({
+          studentId,
+          courseOfferingId: courseId,
+          grade: gradeValue,
+          marks: marksValue,
+        });
+        console.log('Grade assign response:', response);
+      }
       toast.success('Grade saved successfully');
-      fetchCourseData();
+      // Refresh course data to show updated grades
+      await fetchCourseData();
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to save grade');
+      console.error('Save grade error:', error);
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.errors?.[0]?.msg || 
+                          error.message || 
+                          'Failed to save grade';
+      toast.error(errorMessage);
     }
   };
 
@@ -258,7 +316,7 @@ export default function TeacherCourseDetails() {
                       const existingGrade = grades.find(g => g.studentId === enrollment.studentId);
                       const formData = gradeForm[enrollment.studentId] || {
                         grade: existingGrade?.grade || '',
-                        marks: existingGrade?.marks || '',
+                        marks: existingGrade?.marks !== null && existingGrade?.marks !== undefined ? existingGrade.marks.toString() : '',
                       };
 
                       return (
@@ -290,23 +348,43 @@ export default function TeacherCourseDetails() {
                             />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            <button
-                              onClick={() => handleSaveGrade(enrollment.studentId)}
-                              className="text-blue-600 hover:text-blue-800 mr-3"
-                            >
-                              Save
-                            </button>
-                            {existingGrade && !existingGrade.isPublished && (
+                            <div className="flex flex-col gap-2">
+                              <div>
+                                <button
+                                  onClick={() => handleSaveGrade(enrollment.studentId)}
+                                  className="text-blue-600 hover:text-blue-800 mr-3"
+                                >
+                                  Save
+                                </button>
+                                {existingGrade && !existingGrade.isPublished && (
+                                  <button
+                                    onClick={() => handlePublishGrade(existingGrade.id)}
+                                    className="text-green-600 hover:text-green-800"
+                                  >
+                                    Publish
+                                  </button>
+                                )}
+                                {existingGrade?.isPublished && (
+                                  <span className="text-green-600 text-xs">Published</span>
+                                )}
+                              </div>
                               <button
-                                onClick={() => handlePublishGrade(existingGrade.id)}
-                                className="text-green-600 hover:text-green-800"
+                                onClick={async () => {
+                                  if (confirm(`Are you sure you want to drop ${enrollment.student?.user?.name} from this course?`)) {
+                                    try {
+                                      await enrollmentAPI.dropStudent(enrollment.id);
+                                      toast.success('Student dropped from course successfully');
+                                      fetchCourseData();
+                                    } catch (error) {
+                                      toast.error(error.response?.data?.error || 'Failed to drop student');
+                                    }
+                                  }
+                                }}
+                                className="text-red-600 hover:text-red-800 text-xs"
                               >
-                                Publish
+                                Drop Student
                               </button>
-                            )}
-                            {existingGrade?.isPublished && (
-                              <span className="text-green-600 text-xs">Published</span>
-                            )}
+                            </div>
                           </td>
                         </tr>
                       );
