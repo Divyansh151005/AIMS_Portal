@@ -10,24 +10,33 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Email allowlist for testing - ONLY these emails can receive emails
-const EMAIL_ALLOWLIST = [
-  '2023csb1119@iitrpr.ac.in',
-  '2023eeb1191@iitrpr.ac.in',
-  '2023csb1152@iitrpr.ac.in',
-  '2023meb1387@iitrpr.ac.in',
-];
+// Email allowlist configuration - can be controlled via environment variables
+// Set ENFORCE_EMAIL_ALLOWLIST=false to disable allowlist (e.g., in production)
+// Set EMAIL_ALLOWLIST=email1@example.com,email2@example.com to customize the list
+const ENFORCE_EMAIL_ALLOWLIST = process.env.ENFORCE_EMAIL_ALLOWLIST !== 'false'; // Default: true (enabled)
+const EMAIL_ALLOWLIST = process.env.EMAIL_ALLOWLIST
+  ? process.env.EMAIL_ALLOWLIST.split(',').map(e => e.trim().toLowerCase())
+  : [
+    '2023csb1119@iitrpr.ac.in',
+    '2023eeb1191@iitrpr.ac.in',
+    '2023csb1152@iitrpr.ac.in',
+    '2023csb112@iitrpr.ac.in',
+    '2023meb1387@iitrpr.ac.in',
+  ];
 
 export const sendEmail = async (to, subject, html, text) => {
   try {
-    // Check if recipient email is in allowlist
-    const recipientEmails = Array.isArray(to) ? to : [to];
-    const blockedEmails = recipientEmails.filter(email => !EMAIL_ALLOWLIST.includes(email.toLowerCase()));
-    
-    if (blockedEmails.length > 0) {
-      console.log(`Email blocked by test allowlist: ${blockedEmails.join(', ')}`);
-      // Return a mock success response instead of actually sending
-      return { messageId: 'blocked-by-allowlist', blocked: blockedEmails };
+    // Check if recipient email is in allowlist (only if enforcement is enabled)
+    if (ENFORCE_EMAIL_ALLOWLIST) {
+      const recipientEmails = Array.isArray(to) ? to : [to];
+      const blockedEmails = recipientEmails.filter(email => !EMAIL_ALLOWLIST.includes(email.toLowerCase()));
+
+      if (blockedEmails.length > 0) {
+        console.log(`Email blocked by test allowlist: ${blockedEmails.join(', ')}`);
+        console.log(`To disable allowlist, set ENFORCE_EMAIL_ALLOWLIST=false in .env`);
+        // Return a mock success response instead of actually sending
+        return { messageId: 'blocked-by-allowlist', blocked: blockedEmails };
+      }
     }
 
     const info = await transporter.sendMail({
@@ -45,11 +54,27 @@ export const sendEmail = async (to, subject, html, text) => {
   }
 };
 
+export const sendOTPEmail = async (email, name, otp) => {
+  const subject = 'Your OTP for AIMS Portal Login';
+  const html = `
+    <h2>Login OTP - AIMS Portal</h2>
+    <p>Dear ${name},</p>
+    <p>Your One-Time Password (OTP) for logging into AIMS Portal is:</p>
+    <h1 style="font-size: 32px; letter-spacing: 8px; color: #2563eb; font-family: monospace;">${otp}</h1>
+    <p>This OTP is valid for <strong>10 minutes</strong>.</p>
+    <p>If you did not request this OTP, please ignore this email.</p>
+    <p>Best regards,<br>AIMS Portal Team</p>
+  `;
+  const text = `Your OTP for AIMS Portal login is: ${otp}. Valid for 10 minutes.`;
+
+  return sendEmail(email, subject, html, text);
+};
+
 export const sendStudentApprovalEmail = async (studentEmail, studentName, approved) => {
   const subject = approved
     ? 'Student Account Approved - AIMS Portal'
     : 'Student Account Rejected - AIMS Portal';
-  
+
   const html = approved
     ? `
       <h2>Welcome to AIMS Portal!</h2>
@@ -83,10 +108,10 @@ export const sendEnrollmentStatusEmail = async (studentEmail, studentName, cours
       <p>Best regards,<br>AIMS Portal Team</p>
     `;
   } else if (status === 'PENDING_ADVISOR_APPROVAL') {
-    subject = role === 'STUDENT' 
+    subject = role === 'STUDENT'
       ? `Instructor Approved - Awaiting Advisor Approval - ${courseCode}`
       : `New Enrollment Request - ${courseCode}`;
-    
+
     html = role === 'STUDENT'
       ? `
         <h2>Instructor Approved Your Request</h2>
