@@ -17,7 +17,7 @@ import timetableRoutes from './routes/timetable.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5001; // Changed from 5000 to avoid AirPlay conflict
+const PORT = process.env.PORT || 3001; // Changed from 5000 to avoid AirPlay conflict
 
 // Middleware
 app.use(cors({

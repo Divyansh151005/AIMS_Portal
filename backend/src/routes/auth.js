@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { signup, login, getMe } from '../controllers/authController.js';
+import { signup, sendOTP, verifyOTPAndLogin, getMe } from '../controllers/authController.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -9,18 +9,21 @@ const router = express.Router();
 const signupValidation = [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email is required'),
-  body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters'),
+  body('role').isIn(['STUDENT', 'TEACHER']).withMessage('Valid role is required'),
 ];
 
-const loginValidation = [
+const sendOTPValidation = [
   body('email').isEmail().withMessage('Valid email is required'),
-  body('password').notEmpty().withMessage('Password is required'),
+];
+
+const verifyOTPValidation = [
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
 ];
 
 router.post('/signup', signupValidation, signup);
-router.post('/login', loginValidation, login);
+router.post('/send-otp', sendOTPValidation, sendOTP);
+router.post('/verify-otp', verifyOTPValidation, verifyOTPAndLogin);
 router.get('/me', authenticate, getMe);
 
 export default router;

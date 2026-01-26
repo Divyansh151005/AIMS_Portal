@@ -20,7 +20,7 @@ import prisma from '../src/config/database.js';
 
 dotenv.config();
 
-const BASE_URL = process.env.TEST_API_URL || 'http://localhost:5001/api'; // Changed from 5000 to 5001
+const BASE_URL = process.env.TEST_API_URL || 'http://localhost:3001/api'; // Changed from 5000 to 3001
 let testResults = [];
 let bugs = [];
 let adminToken = null;
@@ -254,7 +254,7 @@ async function testAuthentication() {
     name: 'Pending Student',
     role: 'STUDENT',
   });
-  
+
   // Verify user was created with PENDING status
   if (signupRes.success || signupRes.status === 409) {
     // Wait a moment for DB commit, then verify status in DB
@@ -262,7 +262,7 @@ async function testAuthentication() {
     const user = await prisma.user.findUnique({
       where: { email: pendingStudentEmail },
     });
-    
+
     if (user && user.status === 'PENDING_ADMIN_APPROVAL') {
       const result4 = await apiCall('POST', '/auth/login', {
         email: pendingStudentEmail,
@@ -355,7 +355,7 @@ async function testAdminWorkflows() {
     where: { user: { email: TEST_USERS.teacher1.email } },
     include: { user: true },
   });
-  
+
   if (existingTeacher1) {
     teacher1Id = existingTeacher1.id;
     logTest(
@@ -397,7 +397,7 @@ async function testAdminWorkflows() {
   const existingTeacher2 = await prisma.teacher.findFirst({
     where: { user: { email: TEST_USERS.teacher2.email } },
   });
-  
+
   if (existingTeacher2) {
     logTest(`TC-${testCounter++}`, 'Admin - Create Second Teacher', 'POST /admin/teachers', 'Status 201 or exists', `Teacher already exists (OK)`, true);
   } else {
@@ -635,7 +635,7 @@ async function testEnrollmentWorkflow() {
       where: { user: { email: TEST_USERS.student1.email } },
     });
     const studentBranch = studentInfo?.branch || 'CSE';
-    
+
     // Create a new course with same slot but different course code
     const createCourse2Result = await apiCall('POST', '/courses/offerings', {
       courseCode: `CS302-${Date.now()}`, // Unique course code to avoid duplicates
@@ -775,7 +775,7 @@ async function testCourseDrop() {
   let dropEnrollmentId = null;
   if (enrollForDrop.success) {
     dropEnrollmentId = enrollForDrop.data.enrollmentRequest.id;
-    
+
     // Approve it first
     await apiCall('POST', `/enrollments/approve/instructor/${dropEnrollmentId}`, {}, teacher1Token);
     await apiCall('POST', `/enrollments/approve/advisor/${dropEnrollmentId}`, {}, teacher1Token);
@@ -1120,7 +1120,7 @@ function generateDetailedReport() {
   report += `\n## 🚦 Final Verdict\n\n`;
   const productionReady = passRate >= 90 && bugs.filter(b => b.severity === 'CRITICAL').length === 0;
   report += `**Production-Ready:** ${productionReady ? '✅ YES' : '❌ NO'}\n\n`;
-  
+
   if (!productionReady) {
     report += `**Reason:** `;
     if (passRate < 90) report += `Pass rate (${passRate}%) below 90% threshold. `;

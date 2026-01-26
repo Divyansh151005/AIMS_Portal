@@ -3,11 +3,11 @@
 ## 🔧 Issues Fixed
 
 ### 1. Port Mismatch ✅
-**Problem:** Frontend was trying to connect to port 5000, but backend runs on port 5001
+**Problem:** Frontend was trying to connect to port 5000, but backend runs on port 3001
 **Fix:** 
-- Updated `frontend/src/lib/api.js` to default to port 5001
-- Created `.env.local` with `NEXT_PUBLIC_API_URL=http://localhost:5001/api`
-- Updated `.env` file to use port 5001
+- Updated `frontend/src/lib/api.js` to default to port 3001
+- Created `.env.local` with `NEXT_PUBLIC_API_URL=http://localhost:3001/api`
+- Updated `.env` file to use port 3001
 
 ### 2. Input Text Visibility ✅
 **Problem:** Text not visible in input fields
@@ -42,7 +42,7 @@
 
 3. **Verify Backend is Running**:
    ```bash
-   curl http://localhost:5001/api/health
+   curl http://localhost:3001/api/health
    # Should return: {"status":"ok","message":"AIMS Portal API is running"}
    ```
 
@@ -52,7 +52,7 @@
 
 - ✅ Login page: Text visible, connects to correct port
 - ✅ Signup page: Text visible, connects to correct port  
-- ✅ API calls: All requests go to port 5001
+- ✅ API calls: All requests go to port 3001
 - ✅ Admin login: Should work with credentials above
 
 ---

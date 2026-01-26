@@ -64,7 +64,8 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String
-  password  String
+  otp       String?
+  otpExpiry DateTime?
   role      UserRole
   status    UserStatus @default(PENDING_ADMIN_APPROVAL)
   createdAt DateTime @default(now())

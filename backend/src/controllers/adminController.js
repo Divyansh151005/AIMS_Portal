@@ -8,7 +8,6 @@ const UserStatus = {
   REJECTED: 'REJECTED',
   INACTIVE: 'INACTIVE',
 };
-import { hashPassword } from '../utils/auth.js';
 import { sendStudentApprovalEmail } from '../config/email.js';
 
 export const getDashboard = async (req, res, next) => {
@@ -432,7 +431,7 @@ export const createTeacher = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, name, password, department } = req.body;
+    const { email, name, department } = req.body;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -443,16 +442,12 @@ export const createTeacher = async (req, res, next) => {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    // Hash password
-    const hashedPassword = await hashPassword(password);
-
     // Create user and teacher in transaction
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           email: email.toLowerCase(),
           name,
-          password: hashedPassword,
           role: 'TEACHER',
           status: UserStatus.ACTIVE, // Teachers created by admin are automatically active
         },
@@ -468,13 +463,11 @@ export const createTeacher = async (req, res, next) => {
       return { user, teacher };
     });
 
-    const { password: _, ...userWithoutPassword } = result.user;
-
     res.status(201).json({
       message: 'Teacher created successfully',
       teacher: {
         ...result.teacher,
-        user: userWithoutPassword,
+        user: result.user,
       },
     });
   } catch (error) {

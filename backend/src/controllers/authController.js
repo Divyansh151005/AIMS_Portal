@@ -1,7 +1,9 @@
 import { validationResult } from 'express-validator';
 import prisma from '../config/database.js';
-import { hashPassword, comparePassword, generateToken } from '../utils/auth.js';
+import { generateToken } from '../utils/auth.js';
 import { parseStudentEmail } from '../utils/emailParser.js';
+import { generateOTP, hashOTP, verifyOTP, isOTPExpired, getOTPExpiry } from '../utils/otpUtils.js';
+import { sendOTPEmail } from '../config/email.js';
 
 // Use string literals for enum values (Prisma enums are strings)
 const UserRole = {
@@ -25,7 +27,7 @@ export const signup = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, email, password, role } = req.body;
+    const { name, email, role } = req.body;
 
     // Validate role
     if (!['STUDENT', 'TEACHER'].includes(role)) {
@@ -40,9 +42,6 @@ export const signup = async (req, res, next) => {
     if (existingUser) {
       return res.status(409).json({ error: 'Email already registered' });
     }
-
-    // Hash password
-    const hashedPassword = await hashPassword(password);
 
     // Create user transaction
     if (role === 'STUDENT') {
@@ -60,7 +59,6 @@ export const signup = async (req, res, next) => {
           data: {
             email: email.toLowerCase(),
             name,
-            password: hashedPassword,
             role: UserRole.STUDENT,
             status: UserStatus.PENDING_ADMIN_APPROVAL,
           },
@@ -89,7 +87,6 @@ export const signup = async (req, res, next) => {
         data: {
           email: email.toLowerCase(),
           name,
-          password: hashedPassword,
           role: UserRole.TEACHER,
           status: UserStatus.PENDING_ADMIN_APPROVAL,
         },
@@ -107,14 +104,67 @@ export const signup = async (req, res, next) => {
   }
 };
 
-export const login = async (req, res, next) => {
+export const sendOTP = async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password } = req.body;
+    const { email } = req.body;
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email' });
+    }
+
+    // Check status - only ACTIVE users can login
+    if (user.status !== UserStatus.ACTIVE) {
+      return res.status(403).json({
+        error: `Account is ${user.status}. Please wait for approval.`,
+        status: user.status,
+      });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+    const hashedOTP = await hashOTP(otp);
+    const otpExpiry = getOTPExpiry();
+
+    // Store OTP in database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otp: hashedOTP,
+        otpExpiry: otpExpiry,
+      },
+    });
+
+    // Send OTP via email
+    await sendOTPEmail(email.toLowerCase(), user.name, otp);
+
+    res.json({
+      message: 'OTP sent to your email',
+      email: email.toLowerCase(),
+    });
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    next(error);
+  }
+};
+
+export const verifyOTPAndLogin = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, otp } = req.body;
 
     // Find user
     const user = await prisma.user.findUnique({
@@ -126,36 +176,49 @@ export const login = async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid email or OTP' });
     }
 
-    // Check password
-    const isPasswordValid = await comparePassword(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+    // Check if OTP exists
+    if (!user.otp || !user.otpExpiry) {
+      return res.status(401).json({ error: 'No OTP found. Please request a new OTP.' });
     }
 
-    // Check status - only ACTIVE users can login
-    if (user.status !== UserStatus.ACTIVE) {
-      return res.status(403).json({
-        error: `Account is ${user.status}. Please wait for approval.`,
-        status: user.status,
+    // Check if OTP has expired
+    if (isOTPExpired(user.otpExpiry)) {
+      // Clear expired OTP
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { otp: null, otpExpiry: null },
       });
+      return res.status(401).json({ error: 'OTP has expired. Please request a new OTP.' });
     }
+
+    // Verify OTP
+    const isOTPValid = await verifyOTP(otp, user.otp);
+    if (!isOTPValid) {
+      return res.status(401).json({ error: 'Invalid OTP' });
+    }
+
+    // Clear OTP from database after successful verification
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { otp: null, otpExpiry: null },
+    });
 
     // Generate token
     const token = generateToken(user.id, user.role);
 
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
+    // Remove OTP fields from response
+    const { otp: _, otpExpiry: __, ...userWithoutOTP } = user;
 
     res.json({
       message: 'Login successful',
       token,
-      user: userWithoutPassword,
+      user: userWithoutOTP,
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Verify OTP error:', error);
     next(error);
   }
 };
@@ -188,8 +251,8 @@ export const getMe = async (req, res, next) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const { password: _, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
+    const { otp: _, otpExpiry: __, ...userWithoutOTP } = user;
+    res.json(userWithoutOTP);
   } catch (error) {
     console.error('GetMe error:', error);
     next(error);

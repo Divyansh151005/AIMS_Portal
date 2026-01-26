@@ -10,7 +10,6 @@ export default function SignupPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
     name: '',
     role: 'STUDENT',
     branch: '',
@@ -47,7 +46,7 @@ export default function SignupPage() {
       <div className="max-w-2xl w-full bg-white rounded-lg shadow-lg p-8">
         <h1 className="text-3xl font-bold text-center mb-2 text-gray-800">Create Account</h1>
         <p className="text-center text-gray-600 mb-8">AIMS Portal - Academic Information Management System</p>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -81,23 +80,7 @@ export default function SignupPage() {
               />
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password *
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                minLength={6}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800"
-              />
-            </div>
-
-            <div>
+            <div className="md:col-span-2">
               <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
                 Role *
               </label>

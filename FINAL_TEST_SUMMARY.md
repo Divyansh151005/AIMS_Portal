@@ -82,7 +82,7 @@ All tests passing! The backend is fully functional and production-ready.
 
 ### 4. Port Configuration ✅
 **Issue:** Port 5000 blocked by macOS AirPlay
-**Fix:** Changed to port 5001, updated `.env` and test configuration
+**Fix:** Changed to port 3001, updated `.env` and test configuration
 
 ### 5. Prisma Enum Imports ✅
 **Issue:** ES module import errors for Prisma enums
@@ -93,8 +93,8 @@ All tests passing! The backend is fully functional and production-ready.
 ## 🎯 Backend Status
 
 ### ✅ Server Health
-- **Port:** 5001 (running)
-- **Health Check:** `http://localhost:5001/api/health` ✅
+- **Port:** 3001 (running)
+- **Health Check:** `http://localhost:3001/api/health` ✅
 - **All API Endpoints:** Working ✅
 
 ### ✅ Database
@@ -128,7 +128,7 @@ All tests passing! The backend is fully functional and production-ready.
 ## 🚀 How to Run Tests
 
 ```bash
-# Ensure server is running on port 5001
+# Ensure server is running on port 3001
 cd backend
 npm run dev
 

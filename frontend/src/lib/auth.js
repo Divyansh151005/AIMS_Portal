@@ -17,15 +17,23 @@ export const isAuthenticated = () => {
   return !!getToken();
 };
 
-export const login = async (email, password) => {
-  console.log(email,password)
+export const sendOTP = async (email) => {
   try {
-    const response = await authAPI.login({ email, password });
+    const response = await authAPI.sendOTP({ email });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { error: 'Failed to send OTP' };
+  }
+};
+
+export const verifyOTP = async (email, otp) => {
+  try {
+    const response = await authAPI.verifyOTP({ email, otp });
     const { token, user } = response.data;
     setToken(token);
     return { user, token };
   } catch (error) {
-    throw error.response?.data || { error: 'Login failed' };
+    throw error.response?.data || { error: 'OTP verification failed' };
   }
 };
 

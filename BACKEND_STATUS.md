@@ -1,9 +1,9 @@
 # Backend Status Report
 
 ## ✅ Server Status
-- **Port:** 5001 (changed from 5000 due to macOS AirPlay conflict)
+- **Port:** 3001 (changed from 5000 due to macOS AirPlay conflict)
 - **Status:** ✅ Running
-- **Health Check:** `http://localhost:5001/api/health` - Working
+- **Health Check:** `http://localhost:3001/api/health` - Working
 
 ## 📊 Test Results Summary
 - **Total Tests:** 26
@@ -67,8 +67,8 @@
 ## 🔧 Configuration
 
 ### Port Configuration
-- **Backend:** Port 5001 (`.env` PORT=5001)
-- **Test Suite:** Port 5001 (automatic)
+- **Backend:** Port 3001 (`.env` PORT=3001)
+- **Test Suite:** Port 3001 (automatic)
 - **Reason:** macOS AirPlay Receiver uses port 5000
 
 ### Database
